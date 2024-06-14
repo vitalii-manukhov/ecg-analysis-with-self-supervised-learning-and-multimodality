@@ -1,0 +1,7 @@
+=============================================
+Pre-training Dataset: ECG
+Target (fine-tuning) Dataset: EMG
+Method:  TF-C
+Mode:    fine_tune_test
+=============================================
+Data loaded ...

@@ -1,1 +1,1 @@
-# ecg-analysis-with-self-supervised-learning-and-multimodality
+# TFC-pretraining + METS zero-shot learning
