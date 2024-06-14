@@ -1,8 +1,8 @@
 """
     ...
 """
+# Imports
 import os
-# import sys
 from datetime import datetime
 import argparse
 import numpy as np
@@ -13,47 +13,46 @@ from model import TFC, target_classifier
 from dataloader import data_generator
 from config_files.ECG_Configs import Configs
 
-# SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(os.path.dirname(SCRIPT_DIR))
-
-
 # Args selections
 start_time = datetime.now()
 parser = argparse.ArgumentParser()
+
 # Model parameters
 home_dir = os.getcwd()
+
+# Set up command line arguments and create parser
 parser.add_argument('--run_description', default='run1', type=str,
                     help='Experiment Description')
-parser.add_argument('--seed', default=42, type=int, help='seed value')
-
-# 1. self_supervised pre_train; 2. finetune (itself contains finetune and test)
+parser.add_argument('--seed', default=42, type=int,
+                    help='seed value')
 parser.add_argument('--training_mode', default='pre_train', type=str,
                     help='pre_train, fine_tune_test')
-
 parser.add_argument('--pretrain_dataset', default='ECG', type=str,
-                    help='Dataset of choice: SleepEEG, FD_A, HAR, ECG')
+                    help='Dataset of choice: ECG')
 parser.add_argument('--target_dataset', default='EMG', type=str,
-                    help='Dataset of choice: Epilepsy, FD_B, Gesture, EMG')
-
+                    help='Dataset of choice: EMG')
 parser.add_argument('--logs_save_dir', default='../experiments_logs', type=str,
                     help='saving directory')
 parser.add_argument('--device', default='cpu', type=str,
                     help='cpu or cuda')
 parser.add_argument('--home_path', default=home_dir, type=str,
                     help='Project home directory')
+
 args, unknown = parser.parse_known_args()
 
+# Set up device
 with_gpu = torch.cuda.is_available()
 if with_gpu:
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
+
 print(f"We are using {device} now.")
 
+# Set up paths, experiment description and loggers
 pretrain_dataset = args.pretrain_dataset
 targetdata = args.target_dataset
 experiment_description = str(pretrain_dataset) + '_2_' + str(targetdata)
-
 
 method = 'TF-C'
 training_mode = args.training_mode
@@ -71,8 +70,8 @@ torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
-#
 
+# Set up experiment log directory and initialize logger
 experiment_log_dir = os.path.join(logs_save_dir, experiment_description, run_description,
                                   training_mode + f"_seed_{SEED}_2layertransformer")
 # 'experiments_logs/Exp1/run1/train_linear_seed_0'
@@ -81,7 +80,6 @@ os.makedirs(experiment_log_dir, exist_ok=True)
 # loop through domains
 counter = 0
 src_counter = 0
-
 
 # Logging
 log_file_name = os.path.join(experiment_log_dir, f"logs_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}.log")
@@ -97,7 +95,7 @@ logger.debug("=" * 45)
 # Load datasets
 sourcedata_path = f"../../datasets/{pretrain_dataset}"
 targetdata_path = f"../../datasets/{targetdata}"
-subset = True  # if subset= true, use a subset for debugging.
+subset = True  # if subset=true, use a subset for debugging.
 train_dl, valid_dl, test_dl = data_generator(sourcedata_path, targetdata_path,
                                              configs, training_mode, subset=subset)
 logger.debug("Data loaded ...")
@@ -107,7 +105,6 @@ logger.debug("Data loaded ...")
 TFC_model = TFC(configs).to(device)
 classifier = target_classifier(configs).to(device)
 temporal_contr_model = None
-
 
 if training_mode == "fine_tune_test":
     # load saved model of this experiment

@@ -1,6 +1,7 @@
 """
 ...
 """
+# Import libraries
 import os
 import sys
 
@@ -12,14 +13,23 @@ import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score, \
     accuracy_score, precision_score, f1_score, recall_score
 from sklearn.neighbors import KNeighborsClassifier
+# Import custom loss function
 from loss import NTXentLoss_poly
+from zero_shot_classification import zero_shot_classification
 
 sys.path.append("..")
 
 
-def one_hot_encoding(X):
+def one_hot_encoding(X) -> torch.Tensor:
     """
-    ...
+    Description:
+        One-hot encoding of the input data.
+
+    Args:
+        X: The input data.
+
+    Returns:
+        torch.Tensor: The one-hot encoded data.
     """
     X = [int(x) for x in X]
     n_values = np.max(X) + 1
@@ -28,10 +38,35 @@ def one_hot_encoding(X):
     return b
 
 
-def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl, valid_dl, test_dl, device,
-            logger, config, experiment_log_dir, training_mode):
+def Trainer(model,  model_optimizer, classifier,
+            classifier_optimizer, train_dl, valid_dl,
+            test_dl, device, logger,
+            config, experiment_log_dir, training_mode):
     """
-    ...
+    Description:
+        The main training function.
+        This function trains the model and the classifier.
+        Trainer is divided into three stages:
+            1) pretrain
+            2) finetune
+            3) test
+
+    Args:
+        model: The model used for training.
+        model_optimizer: The optimizer used for training.
+        classifier: The classifier used for training.
+        classifier_optimizer: The optimizer used for training.
+        train_dl: The training dataloader.
+        valid_dl: The validation dataloader.
+        test_dl: The test dataloader.
+        device: The device used for training.
+        logger: The logger used for logging.
+        config: The configuration dictionary.
+        experiment_log_dir: The directory where the experiment logs will be stored.
+        training_mode: The training mode.
+
+    Returns:
+        None
     """
     # Start training
     logger.debug("Training started ....")
@@ -46,6 +81,7 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
             train_loss = model_pretrain(model, model_optimizer, criterion, train_dl, config, device, training_mode)
             logger.debug("\nPre-training Epoch : " + str(epoch) + ", Train Loss : " + str(train_loss.item()))
 
+        # Save pretrained model
         os.makedirs(os.path.join(experiment_log_dir, "saved_models"), exist_ok=True)
         chkpoint = {'model_state_dict': model.state_dict()}
         torch.save(chkpoint, os.path.join(experiment_log_dir, "saved_models", "ckp_last.pt"))
@@ -69,9 +105,9 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
                                                                           classifier_optimizer=classifier_optimizer)
             scheduler.step(valid_loss)
 
-            # save best fine-tuning model""
+            # save best fine-tuning model
             global arch
-            arch = 'sleepedf2eplipsy'
+            arch = 'ecg2emg'
             if len(total_f1) == 0 or F1 > max(total_f1):
                 print('update fine-tuned model')
                 os.makedirs('experiments_logs/finetunemodel/', exist_ok=True)
@@ -126,7 +162,17 @@ def Trainer(model,  model_optimizer, classifier, classifier_optimizer, train_dl,
 
 def model_pretrain(model, model_optimizer, criterion, train_loader, config, device, training_mode,):
     """
-    ...
+    Description:
+        This function is used for pre-training.
+
+    Args:
+        model: the model to be trained
+        model_optimizer: the optimizer of the model
+        criterion: the loss function
+        train_loader: the training data loader
+
+    Returns:
+        None
     """
     total_loss = []
     model.train()
@@ -175,6 +221,19 @@ def model_pretrain(model, model_optimizer, criterion, train_loader, config, devi
 def model_finetune(model, model_optimizer, val_dl,
                    config, device, training_mode,
                    classifier=None, classifier_optimizer=None):
+    """
+    Description:
+        This function is used for finetuning.
+
+    Args:
+        model: the model to be trained
+        model_optimizer: the optimizer of the model
+        criterion: the loss function
+        train_loader: the training data loader
+
+    Returns:
+        None
+    """
     global labels, pred_numpy, fea_concat_flat
     model.train()
     classifier.train()
@@ -221,7 +280,7 @@ def model_finetune(model, model_optimizer, val_dl,
         loss_p = criterion(predictions, labels)
 
         lam = 0.1
-        loss = loss_p + l_TF + lam*(loss_t + loss_f)
+        loss = loss_p + l_TF + lam * (loss_t + loss_f)
 
         acc_bs = labels.eq(predictions.detach().argmax(dim=1)).float().mean()
         onehot_label = F.one_hot(labels)
@@ -267,7 +326,21 @@ def model_finetune(model, model_optimizer, val_dl,
 
 def model_test(model,  test_dl, config,  device, training_mode, classifier=None, classifier_optimizer=None):
     """
-    ...
+    Description:
+        This function is used for testing.
+        model_test is divided into two stages:
+            1) test
+            2) test_classifier
+
+    Args:
+        model: The model used for testing.
+        test_dl: The testing dataloader.
+        config: The configuration dictionary.
+        device: The device used for testing.
+        training_mode: The training mode.
+
+    Returns:
+        None
     """
     model.eval()
     classifier.eval()

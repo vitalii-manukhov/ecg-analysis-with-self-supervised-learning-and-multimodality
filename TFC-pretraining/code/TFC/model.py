@@ -57,7 +57,7 @@ class TFC(nn.Module):
 class target_classifier(nn.Module):
     def __init__(self, configs):
         super(target_classifier, self).__init__()
-        self.logits = nn.Linear(2*128, 64)
+        self.logits = nn.Linear(2 * 128, 64)
         self.logits_simple = nn.Linear(64, configs.num_classes_target)
 
     def forward(self, emb):
