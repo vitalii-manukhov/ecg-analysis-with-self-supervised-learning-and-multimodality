@@ -1,0 +1,5 @@
+1. ClinicalBERT: https://huggingface.co/medicalai/ClinicalBERT
+2. https://github.com/JerryKingQAQ/METS/tree/main
+3. https://github.com/mims-harvard/TFC-pretraining
+4. https://www.kaggle.com/datasets/shayanfazeli/heartbeat
+5. pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu

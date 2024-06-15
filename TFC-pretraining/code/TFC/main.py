@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from trainer import Trainer
 from utils import _logger
-from model import TFC, target_classifier
+from model import TFC, TargetClassifier
 from dataloader import data_generator
 from config_files.ECG_Configs import Configs
 
@@ -103,7 +103,7 @@ logger.debug("Data loaded ...")
 # Load Model
 # Here are two models, one basemodel, another is temporal contrastive model
 TFC_model = TFC(configs).to(device)
-classifier = target_classifier(configs).to(device)
+classifier = TargetClassifier(configs).to(device)
 temporal_contr_model = None
 
 if training_mode == "fine_tune_test":

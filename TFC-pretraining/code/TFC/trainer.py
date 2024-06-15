@@ -260,8 +260,10 @@ def model_finetune(model, model_optimizer, val_dl,
         classifier_optimizer.zero_grad()  # the classifier is newly added and randomly initialized
 
         """Produce embeddings"""
+        # Get time and frequency embeddings from the encoder
         h_t, z_t, h_f, z_f = model(data, data_f)
         h_t_aug, z_t_aug, h_f_aug, z_f_aug = model(aug1, aug1_f)
+
         nt_xent_criterion = NTXentLoss_poly(device, config.target_batch_size, config.Context_Cont.temperature,
                                             config.Context_Cont.use_cosine_similarity)
         loss_t = nt_xent_criterion(h_t, h_t_aug)
@@ -274,7 +276,19 @@ def model_finetune(model, model_optimizer, val_dl,
         loss_c = (1 + l_TF - l_1) + (1 + l_TF - l_2) + (1 + l_TF - l_3)
 
         """Add supervised classifier: 1) it's unique to finetuning. 2) this classifier will also be used in test."""
-        fea_concat = torch.cat((z_t, z_f), dim=1)
+        # Get text embeddings from Language Model
+        categories = ["Normal beat",
+                      "Supraventricular premature or ectopic beat (atrial or nodal)",
+                      "Premature ventricular contraction",
+                      "Fusion of ventricular and normal beat",
+                      "Unclassifiable beat"]
+        text_embeddings = classifier.zero_shot_process_text(categories)
+
+        # Expand and reshape text_embeddings for concatenation
+        text_embeddings_expanded = text_embeddings.unsqueeze(0).expand(z_t.shape[0], -1, -1)
+        text_embeddings_flat = text_embeddings_expanded.reshape(z_t.shape[0], -1)
+
+        fea_concat = torch.cat((z_t, z_f, text_embeddings_flat), dim=1)
         predictions = classifier(fea_concat)
         fea_concat_flat = fea_concat.reshape(fea_concat.shape[0], -1)
         loss_p = criterion(predictions, labels)
