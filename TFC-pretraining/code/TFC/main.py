@@ -26,7 +26,7 @@ parser.add_argument('--run_description', default='run1', type=str,
                     help='Experiment Description')
 parser.add_argument('--seed', default=42, type=int,
                     help='seed value')
-parser.add_argument('--training_mode', default='fine_tune_test', type=str,
+parser.add_argument('--training_mode', default='pre_train', type=str,
                     help='pre_train, fine_tune_test')
 parser.add_argument('--pretrain_dataset', default='ECG', type=str,
                     help='Dataset of choice: ECG')
@@ -96,7 +96,7 @@ logger.debug("=" * 45)
 # Load datasets
 sourcedata_path = f"../../datasets/{pretrain_dataset}"
 target_data_path = f"../../datasets/{target_data}"
-subset = True  # if subset=true, use a subset for debugging.
+subset = False  # if subset=True, use a subset for debugging.
 train_dl, valid_dl, test_dl = data_generator(sourcedata_path, target_data_path,
                                              configs, training_mode, subset=subset)
 logger.debug("Data loaded ...")

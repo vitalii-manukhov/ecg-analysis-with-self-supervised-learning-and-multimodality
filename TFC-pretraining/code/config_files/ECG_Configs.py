@@ -11,7 +11,7 @@ class Configs(object):
         self.features_len = 18
 
         # training configs
-        self.num_epoch = 1  # 40 # 100
+        self.num_epoch = 1  # 40 # 100  # 1
 
         # optimizer parameters
         self.beta1 = 0.9
@@ -27,14 +27,14 @@ class Configs(object):
         self.augmentation = augmentations()
 
         """New hyperparameters"""
-        self.TSlength_aligned = 186  # 1500
+        self.TSlength_aligned = 1500  # 1500 # 186
         self.lr_f = self.lr
         self.target_batch_size = 41  # 82 # 41
         self.increased_dim = 1
         self.final_out_channels = 128
         self.num_classes_target = 3
         self.features_len_f = self.features_len
-        self.CNNoutput_channel = 190  # 751#
+        self.CNNoutput_channel = 190  # 751
 
 
 class augmentations(object):

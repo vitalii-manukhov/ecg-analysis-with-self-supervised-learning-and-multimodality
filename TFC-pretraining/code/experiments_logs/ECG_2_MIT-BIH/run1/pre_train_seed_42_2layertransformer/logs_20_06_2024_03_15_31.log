@@ -1,7 +1,0 @@
-=============================================
-Pre-training Dataset: ECG
-Target (fine-tuning) Dataset: MIT-BIH
-Method:  TF-C
-Mode: pre_train
-=============================================
-Data loaded ...

@@ -5,7 +5,6 @@ from torch import nn
 import torch
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torch.nn.functional as F
-import numpy as np
 from transformers import BertModel, BertTokenizer
 
 BERT_PRETRAIN_PATH = "../../BERT_pretrain/"
@@ -18,6 +17,8 @@ class TFC(nn.Module):
     """
     def __init__(self, configs):
         super(TFC, self).__init__()
+
+        self.adaptive_avgpool = nn.AdaptiveAvgPool1d(configs.TSlength_aligned)
 
         encoder_layers_t = TransformerEncoderLayer(configs.TSlength_aligned,
                                                    dim_feedforward=2*configs.TSlength_aligned,
@@ -47,7 +48,10 @@ class TFC(nn.Module):
         """
         ...
         """
-        print(x_in_t.shape, x_in_f.shape)
+        # Adaptive average pooling
+        x_in_t = self.adaptive_avgpool(x_in_t)
+        x_in_f = self.adaptive_avgpool(x_in_f)
+
         # Use Transformer
         x = self.transformer_encoder_t(x_in_t)
         h_time = x.reshape(x.shape[0], -1)
@@ -91,6 +95,7 @@ class FrozenLanguageModel(nn.Module):
         )
         for param in self.language_model.parameters():
             param.requires_grad = False
+        self.dimension_reducer = nn.Linear(768, 256)
 
     def forward(self, input_ids, attention_mask) -> torch.Tensor:
         """
@@ -104,7 +109,8 @@ class FrozenLanguageModel(nn.Module):
         """
         outputs = self.language_model(input_ids=input_ids, attention_mask=attention_mask)
         sentence_representation = outputs.last_hidden_state[:, 0, :]
-        return sentence_representation
+        reduced_representation = self.dimension_reducer(sentence_representation)
+        return reduced_representation
 
 
 class TargetClassifier(nn.Module):
@@ -117,8 +123,10 @@ class TargetClassifier(nn.Module):
         self.logits_simple = nn.Linear(64, configs.num_classes_target)
         self.text_encoder = FrozenLanguageModel()
         self.embedding_dim = self.text_encoder.language_model.config.hidden_size
-        self.tokenizer = BertTokenizer.from_pretrained('emilyalsentzer/Bio_ClinicalBERT', cache_dir=BERT_PRETRAIN_PATH)
+        self.tokenizer = BertTokenizer.from_pretrained('emilyalsentzer/Bio_ClinicalBERT',
+                                                       cache_dir=BERT_PRETRAIN_PATH)
 
+    @staticmethod
     def get_diagnostic_string(label: int):
         class_names = {
             0: "Normal ECG",  # "Normal beat"
@@ -134,7 +142,7 @@ class TargetClassifier(nn.Module):
         else:
             return "Invalid label"
 
-    def zero_shot_process_text(self, labels) -> torch.tensor:
+    def zero_shot_process_text(self, labels) -> torch.Tensor:
         """
         Description:
             Process the text data for zero-shot learning.
@@ -163,7 +171,6 @@ class TargetClassifier(nn.Module):
             label: feature for label, feature in zip(categories, text_representation)
         }
 
-        return class_text_representation
         class_text_rep_tensor = torch.stack(list(class_text_representation.values()))
 
         return class_text_rep_tensor
@@ -177,13 +184,15 @@ class TargetClassifier(nn.Module):
 
         # Calculate cosine similarity between the concatenated features and the text representation
         similarities = [F.cosine_similarity(elem.unsqueeze(0), class_text_rep_tensor) for elem in fea_concat]
-        similarities = torch.stack(similarities).to(device)
+        similarities = torch.stack(similarities)
 
-        probabilities = F.softmax(similarities, dim=1).cpu().numpy()
-        max_probability_class = np.argmax(probabilities, axis=1)
-        max_probability_class = torch.tensor(max_probability_class).long()
+        # probabilities = F.softmax(similarities, dim=1).cpu().detach().numpy()
+        # max_probability_class = np.argmax(probabilities, axis=1)
+        # max_probability_class = torch.tensor(max_probability_class).long()
 
-        return max_probability_class
+        # return max_probability_class
+
+        return similarities.to(device)
 
     def forward(self, fea_concat: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """

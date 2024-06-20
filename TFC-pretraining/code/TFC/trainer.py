@@ -97,7 +97,7 @@ def Trainer(model,  model_optimizer, classifier,
         KNN_f1 = []
         global emb_finetune, label_finetune, emb_test, label_test
 
-        for epoch in range(1, config.num_epoch + 1):
+        for epoch in tqdm(range(1, config.num_epoch + 1), desc="Epochs"):
             logger.debug(f'\nEpoch : {epoch}')
 
             valid_loss, emb_finetune, label_finetune, F1 = model_finetune(model, model_optimizer, valid_dl,
@@ -108,7 +108,7 @@ def Trainer(model,  model_optimizer, classifier,
 
             # save best fine-tuning model
             global arch
-            arch = 'ecg2emg'
+            arch = 'ecg2mit-bih'
             if len(total_f1) == 0 or F1 > max(total_f1):
                 print('update fine-tuned model')
                 os.makedirs('experiments_logs/finetunemodel/', exist_ok=True)
@@ -150,6 +150,7 @@ def Trainer(model,  model_optimizer, classifier,
             print('KNN Testing: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f' %
                   (knn_acc, precision, recall, F1, auc, prc))
             KNN_f1.append(F1)
+
         logger.debug("\n################## Best testing performance! #########################")
         performance_array = np.array(performance_list)
         best_performance = performance_array[np.argmax(performance_array[:, 0], axis=0)]
@@ -157,6 +158,12 @@ def Trainer(model,  model_optimizer, classifier,
               '| AUPRC=%.4f' % (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
                                 best_performance[4], best_performance[5]))
         print('Best KNN F1', max(KNN_f1))
+
+        logger.debug('Best Testing Performance: Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f' % 
+                    (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
+                    best_performance[4], best_performance[5]))
+
+        logger.debug('Best KNN F1: %.4f' % max(KNN_f1))
 
     logger.debug("\n################## Training is Done! #########################")
 
@@ -249,7 +256,7 @@ def model_finetune(model, model_optimizer, val_dl,
     trgs = np.array([])
     feas = np.array([])
 
-    for data, labels, aug1, data_f, aug1_f in val_dl:
+    for data, labels, aug1, data_f, aug1_f in tqdm(val_dl):
         # print('Fine-tuning: {} of target samples'.format(labels.shape[0]))
         data, labels = data.float().to(device), labels.long().to(device)
         data_f = data_f.float().to(device)
@@ -288,13 +295,13 @@ def model_finetune(model, model_optimizer, val_dl,
         loss = loss_p + l_TF + lam * (loss_t + loss_f)
 
         acc_bs = labels.eq(predictions.detach().argmax(dim=1)).float().mean()
-        onehot_label = F.one_hot(labels)
+        onehot_label = F.one_hot(labels, num_classes=5)
         pred_numpy = predictions.detach().cpu().numpy()
 
         try:
             auc_bs = roc_auc_score(onehot_label.detach().cpu().numpy(), pred_numpy, average="macro", multi_class="ovr")
         except ValueError:
-            auc_bs = np.float(0)
+            auc_bs = float(0)
         prc_bs = average_precision_score(onehot_label.detach().cpu().numpy(), pred_numpy)
 
         total_acc.append(acc_bs)
@@ -329,7 +336,7 @@ def model_finetune(model, model_optimizer, val_dl,
     return ave_loss, feas, trgs, F1
 
 
-def model_test(model,  test_dl, config,  device, training_mode, classifier=None, classifier_optimizer=None):
+def model_test(model, test_dl, config,  device, training_mode, classifier=None, classifier_optimizer=None):
     """
     Description:
         This function is used for testing.
@@ -362,27 +369,27 @@ def model_test(model,  test_dl, config,  device, training_mode, classifier=None,
 
     with torch.no_grad():
         labels_numpy_all, pred_numpy_all = np.zeros(1), np.zeros(1)
-        for data, labels, _, data_f, _ in test_dl:
+        for data, labels, _, data_f, _ in tqdm(test_dl):
             data, labels = data.float().to(device), labels.long().to(device)
             data_f = data_f.float().to(device)
 
             """Add supervised classifier: 1) it's unique to finetuning. 2) this classifier will also be used in test"""
             h_t, z_t, h_f, z_f = model(data, data_f)
             fea_concat = torch.cat((z_t, z_f), dim=1)
-            predictions_test = classifier(fea_concat)
+            predictions_test = classifier(fea_concat, labels)
             fea_concat_flat = fea_concat.reshape(fea_concat.shape[0], -1)
             emb_test_all.append(fea_concat_flat)
 
             loss = criterion(predictions_test, labels)
             acc_bs = labels.eq(predictions_test.detach().argmax(dim=1)).float().mean()
-            onehot_label = F.one_hot(labels)
+            onehot_label = F.one_hot(labels, num_classes=5)
             pred_numpy = predictions_test.detach().cpu().numpy()
             labels_numpy = labels.detach().cpu().numpy()
             try:
                 auc_bs = roc_auc_score(onehot_label.detach().cpu().numpy(), pred_numpy,
                                        average="macro", multi_class="ovr")
             except ValueError:
-                auc_bs = np.float(0)
+                auc_bs = float(0)
             prc_bs = average_precision_score(onehot_label.detach().cpu().numpy(), pred_numpy, average="macro")
             pred_numpy = np.argmax(pred_numpy, axis=1)
 
@@ -396,6 +403,7 @@ def model_test(model,  test_dl, config,  device, training_mode, classifier=None,
             trgs = np.append(trgs, labels.data.cpu().numpy())
             labels_numpy_all = np.concatenate((labels_numpy_all, labels_numpy))
             pred_numpy_all = np.concatenate((pred_numpy_all, pred_numpy))
+
     labels_numpy_all = labels_numpy_all[1:]
     pred_numpy_all = pred_numpy_all[1:]
 
