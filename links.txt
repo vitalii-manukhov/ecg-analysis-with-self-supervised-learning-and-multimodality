@@ -1,6 +1,8 @@
 1. ClinicalBERT: https://huggingface.co/emilyalsentzer/Bio_ClinicalBERT/tree/main
-2. METS: https://github.com/JerryKingQAQ/METS/tree/main
-3. TFC: https://github.com/mims-harvard/TFC-pretraining
-4. MIT-BIH: https://www.kaggle.com/datasets/shayanfazeli/heartbeat
-5. PyTorch-CPU: pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-6. PTB-XL: https://www.kaggle.com/datasets/abiirram/ptbxl-ecg-100hz/code
+2. METS GitHub: https://github.com/JerryKingQAQ/METS/tree/main
+3. METS Article: https://arxiv.org/abs/2303.12311
+4. TFC GitHub: https://github.com/mims-harvard/TFC-pretraining
+5. TFC Article: https://arxiv.org/abs/2206.08496
+6. MIT-BIH: https://www.kaggle.com/datasets/shayanfazeli/heartbeat
+7. PyTorch-CPU: pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+8. PTB-XL: https://www.kaggle.com/datasets/abiirram/ptbxl-ecg-100hz/code

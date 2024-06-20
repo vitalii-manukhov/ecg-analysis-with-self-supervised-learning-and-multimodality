@@ -15,7 +15,8 @@ from sklearn.metrics import roc_auc_score, average_precision_score, \
 from sklearn.neighbors import KNeighborsClassifier
 # Import custom loss function
 from loss import NTXentLoss_poly
-from zero_shot_classification import zero_shot_classification
+
+from tqdm import tqdm
 
 sys.path.append("..")
 
@@ -79,13 +80,13 @@ def Trainer(model,  model_optimizer, classifier,
             # Train and validate
             """Train. In fine-tuning, this part is also trained???"""
             train_loss = model_pretrain(model, model_optimizer, criterion, train_dl, config, device, training_mode)
-            logger.debug("\nPre-training Epoch : " + str(epoch) + ", Train Loss : " + str(train_loss.item()))
+            logger.debug(f"\nPre-training Epoch : {epoch}/{config.num_epoch}, Train Loss : {train_loss.item():.4f}")
 
         # Save pretrained model
         os.makedirs(os.path.join(experiment_log_dir, "saved_models"), exist_ok=True)
         chkpoint = {'model_state_dict': model.state_dict()}
         torch.save(chkpoint, os.path.join(experiment_log_dir, "saved_models", "ckp_last.pt"))
-        print(f"Pretrained model is stored at folder:{experiment_log_dir+'saved_models'+'ckp_last.pt'}")
+        print(f"Pretrained model is stored at folder:{experiment_log_dir+'/saved_models'+'/ckp_last.pt'}")
 
     # Fine-tuning and Test
     if training_mode != 'pre_train':
@@ -181,7 +182,7 @@ def model_pretrain(model, model_optimizer, criterion, train_loader, config, devi
     # optimizer
     model_optimizer.zero_grad()
 
-    for batch_idx, (data, labels, aug1, data_f, aug1_f) in enumerate(train_loader):
+    for batch_idx, (data, labels, aug1, data_f, aug1_f) in enumerate(tqdm(train_loader)):
         data, labels = data.float().to(device), labels.long().to(device)  # data: [128, 1, 178], labels: [128]
         aug1 = aug1.float().to(device)  # aug1 = aug2 : [128, 1, 178]
         data_f, aug1_f = data_f.float().to(device), aug1_f.float().to(device)  # aug1 = aug2 : [128, 1, 178]
@@ -211,7 +212,7 @@ def model_pretrain(model, model_optimizer, criterion, train_loader, config, devi
         loss.backward()
         model_optimizer.step()
 
-    print('Pretraining: overall loss:{}, l_t: {}, l_f:{}, l_c:{}'.format(loss, loss_t, loss_f, l_TF))
+    print(f"Pretraining: overall loss: {loss:.4f}, l_t: {loss_t:.4f}, l_f: {loss_f:.4f}, l_TF: {l_TF:.4f}")
 
     ave_loss = torch.tensor(total_loss).mean()
 
@@ -277,19 +278,9 @@ def model_finetune(model, model_optimizer, val_dl,
 
         """Add supervised classifier: 1) it's unique to finetuning. 2) this classifier will also be used in test."""
         # Get text embeddings from Language Model
-        categories = ["Normal beat",
-                      "Supraventricular premature or ectopic beat (atrial or nodal)",
-                      "Premature ventricular contraction",
-                      "Fusion of ventricular and normal beat",
-                      "Unclassifiable beat"]
-        text_embeddings = classifier.zero_shot_process_text(categories)
 
-        # Expand and reshape text_embeddings for concatenation
-        text_embeddings_expanded = text_embeddings.unsqueeze(0).expand(z_t.shape[0], -1, -1)
-        text_embeddings_flat = text_embeddings_expanded.reshape(z_t.shape[0], -1)
-
-        fea_concat = torch.cat((z_t, z_f, text_embeddings_flat), dim=1)
-        predictions = classifier(fea_concat)
+        fea_concat = torch.cat((z_t, z_f), dim=1)
+        predictions = classifier(fea_concat, labels)
         fea_concat_flat = fea_concat.reshape(fea_concat.shape[0], -1)
         loss_p = criterion(predictions, labels)
 
@@ -333,7 +324,7 @@ def model_finetune(model, model_optimizer, val_dl,
     ave_prc = torch.tensor(total_prc).mean()
 
     print(' Finetune: loss = %.4f| Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f| AUROC=%.4f | AUPRC = %.4f'
-          % (ave_loss, ave_acc*100, precision * 100, recall * 100, F1 * 100, ave_auc * 100, ave_prc * 100))
+          % (ave_loss, ave_acc * 100, precision * 100, recall * 100, F1 * 100, ave_auc * 100, ave_prc * 100))
 
     return ave_loss, feas, trgs, F1
 
@@ -422,6 +413,6 @@ def model_test(model,  test_dl, config,  device, training_mode, classifier=None,
 
     performance = [acc * 100, precision * 100, recall * 100, F1 * 100, total_auc * 100, total_prc * 100]
     print('MLP Testing: Acc=%.4f| Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f'
-          % (acc*100, precision * 100, recall * 100, F1 * 100, total_auc*100, total_prc*100))
+          % (acc * 100, precision * 100, recall * 100, F1 * 100, total_auc * 100, total_prc * 100))
     emb_test_all = torch.concat(tuple(emb_test_all))
     return total_loss, total_acc, total_auc, total_prc, emb_test_all, trgs, performance

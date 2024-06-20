@@ -1,0 +1,10 @@
+=============================================
+Pre-training Dataset: ECG
+Target (fine-tuning) Dataset: MIT-BIH
+Method:  TF-C
+Mode: fine_tune_test
+=============================================
+Data loaded ...
+Training started ....
+
+Epoch : 1

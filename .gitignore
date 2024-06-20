@@ -23,3 +23,5 @@ create-datasets/datasets/mit-bih/mitbih_train.csv
 create-datasets/datasets/ptb-xl/ptbxl_ecg_test.csv
 create-datasets/datasets/ptb-xl/ptbxl_ecg_train.csv
 create-datasets/datasets/ptb-xl/ptbxl_data_signals100
+/home/vitalii/projects/ecg-analysis-with-self-supervised-learning-and-multimodality/TFC-pretraining/code/experiments_logs/ECG_2_MIT-BIH/run1
+TFC-pretraining/BERT_pretrain/

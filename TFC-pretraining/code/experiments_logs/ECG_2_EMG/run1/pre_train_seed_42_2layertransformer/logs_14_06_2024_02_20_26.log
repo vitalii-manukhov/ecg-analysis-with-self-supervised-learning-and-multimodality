@@ -1,8 +1,0 @@
-=============================================
-Pre-training Dataset: ECG
-Target (fine-tuning) Dataset: EMG
-Method:  TF-C
-Mode:    pre_train
-=============================================
-Data loaded ...
-Training started ....

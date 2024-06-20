@@ -1,0 +1,13 @@
+=============================================
+Pre-training Dataset: ECG
+Target (fine-tuning) Dataset: MIT-BIH
+Method:  TF-C
+Mode: pre_train
+=============================================
+Data loaded ...
+Training started ....
+
+Pre-training Epoch : 1/1, Train Loss : 10.5961
+
+################## Training is Done! #########################
+Training time is : 0:00:15.828074

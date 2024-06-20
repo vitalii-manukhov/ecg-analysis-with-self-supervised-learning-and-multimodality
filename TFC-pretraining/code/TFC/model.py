@@ -47,6 +47,7 @@ class TFC(nn.Module):
         """
         ...
         """
+        print(x_in_t.shape, x_in_f.shape)
         # Use Transformer
         x = self.transformer_encoder_t(x_in_t)
         h_time = x.reshape(x.shape[0], -1)
@@ -118,7 +119,22 @@ class TargetClassifier(nn.Module):
         self.embedding_dim = self.text_encoder.language_model.config.hidden_size
         self.tokenizer = BertTokenizer.from_pretrained('emilyalsentzer/Bio_ClinicalBERT', cache_dir=BERT_PRETRAIN_PATH)
 
-    def zero_shot_process_text(self, categories):
+    def get_diagnostic_string(label: int):
+        class_names = {
+            0: "Normal ECG",  # "Normal beat"
+            1: "Myocardial Infarction",  # "Supraventricular premature beat"
+            2: "ST/T change",  # "Premature ventricular contraction"
+            3: "Hypertrophy",  # "Fusion of ventricular and normal beat"
+            4: "Conducion Disturbance"  # "Unclassifiable beat"
+        }
+
+        if label in class_names:
+            diagnostic_type = class_names[label]
+            return f"The ECG of {diagnostic_type}, a type of diagnostic"
+        else:
+            return "Invalid label"
+
+    def zero_shot_process_text(self, labels) -> torch.tensor:
         """
         Description:
             Process the text data for zero-shot learning.
@@ -129,34 +145,38 @@ class TargetClassifier(nn.Module):
         Returns:
             torch.Tensor: The processed text data.
         """
-        zero_shot_text_prompt = "The ECG of {label}, a type of diagnostic."
-        prompt_list = [zero_shot_text_prompt.replace("{label}", label) for label in categories]
-        tokens = self.tokenizer(prompt_list, padding=True, truncation=True, return_tensors='pt', max_length=100)
+        categories = [
+            "Normal ECG",
+            "Myocardial Infarction",
+            "ST/T change",
+            "Hypertrophy",
+            "Conducion Disturbance"
+        ]
+
+        prompts = [self.get_diagnostic_string(label.item()) for label in labels]
+        tokens = self.tokenizer(prompts, padding=True, truncation=True, return_tensors='pt', max_length=100)
+
         input_ids, attention_mask = tokens['input_ids'], tokens['attention_mask']
         text_representation = self.text_encoder(input_ids, attention_mask)
+
         class_text_representation = {
             label: feature for label, feature in zip(categories, text_representation)
         }
+
+        return class_text_representation
         class_text_rep_tensor = torch.stack(list(class_text_representation.values()))
 
         return class_text_rep_tensor
 
-    def similarity_classify(self, fea_concat) -> torch.Tensor:
+    def similarity_classify(self, fea_concat: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """
         ...
         """
-        # Define categories
-        categories = ["Normal beat",
-                      "Supraventricular premature or ectopic beat (atrial or nodal)",
-                      "Premature ventricular contraction",
-                      "Fusion of ventricular and normal beat",
-                      "Unclassifiable beat"]
-
         # Get text embeddings from Language Model
-        text_embeddings = self.zero_shot_process_text(categories)
+        class_text_rep_tensor = self.zero_shot_process_text(labels)
 
         # Calculate cosine similarity between the concatenated features and the text representation
-        similarities = [F.cosine_similarity(fea.unsqueeze(0), text_embeddings) for fea in fea_concat]
+        similarities = [F.cosine_similarity(elem.unsqueeze(0), class_text_rep_tensor) for elem in fea_concat]
         similarities = torch.stack(similarities).to(device)
 
         probabilities = F.softmax(similarities, dim=1).cpu().numpy()
@@ -165,10 +185,9 @@ class TargetClassifier(nn.Module):
 
         return max_probability_class
 
-    def forward(self, fea_concat: torch.Tensor) -> torch.Tensor:
+    def forward(self, fea_concat: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """
         ...
         """
-        pred = self.similarity_classify(fea_concat)
-
+        pred = self.similarity_classify(fea_concat, labels)
         return pred

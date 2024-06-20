@@ -20,17 +20,18 @@ parser = argparse.ArgumentParser()
 # Model parameters
 home_dir = os.getcwd()
 
+
 # Set up command line arguments and create parser
 parser.add_argument('--run_description', default='run1', type=str,
                     help='Experiment Description')
 parser.add_argument('--seed', default=42, type=int,
                     help='seed value')
-parser.add_argument('--training_mode', default='pre_train', type=str,
+parser.add_argument('--training_mode', default='fine_tune_test', type=str,
                     help='pre_train, fine_tune_test')
 parser.add_argument('--pretrain_dataset', default='ECG', type=str,
                     help='Dataset of choice: ECG')
-parser.add_argument('--target_dataset', default='EMG', type=str,
-                    help='Dataset of choice: EMG')
+parser.add_argument('--target_dataset', default='MIT-BIH', type=str,
+                    help='Dataset of choice: EMG, MIT-BIH, PTB-XL-Superclass, PTB-XL-Form, PTB-XL-Rhythm')
 parser.add_argument('--logs_save_dir', default='../experiments_logs', type=str,
                     help='saving directory')
 parser.add_argument('--device', default='cpu', type=str,
@@ -51,8 +52,8 @@ print(f"We are using {device} now.")
 
 # Set up paths, experiment description and loggers
 pretrain_dataset = args.pretrain_dataset
-targetdata = args.target_dataset
-experiment_description = str(pretrain_dataset) + '_2_' + str(targetdata)
+target_data = args.target_dataset
+experiment_description = str(pretrain_dataset) + '_2_' + str(target_data)
 
 method = 'TF-C'
 training_mode = args.training_mode
@@ -87,16 +88,16 @@ log_file_name = os.path.join(experiment_log_dir, f"logs_{datetime.now().strftime
 logger = _logger(log_file_name)
 logger.debug("=" * 45)
 logger.debug('Pre-training Dataset: %s', pretrain_dataset)
-logger.debug('Target (fine-tuning) Dataset: %s', targetdata)
+logger.debug('Target (fine-tuning) Dataset: %s', target_data)
 logger.debug('Method:  %s', method)
 logger.debug('Mode: %s', training_mode)
 logger.debug("=" * 45)
 
 # Load datasets
 sourcedata_path = f"../../datasets/{pretrain_dataset}"
-targetdata_path = f"../../datasets/{targetdata}"
+target_data_path = f"../../datasets/{target_data}"
 subset = True  # if subset=true, use a subset for debugging.
-train_dl, valid_dl, test_dl = data_generator(sourcedata_path, targetdata_path,
+train_dl, valid_dl, test_dl = data_generator(sourcedata_path, target_data_path,
                                              configs, training_mode, subset=subset)
 logger.debug("Data loaded ...")
 
@@ -126,4 +127,4 @@ Trainer(TFC_model, model_optimizer, classifier,
         test_dl, device, logger,
         configs, experiment_log_dir, training_mode)
 
-logger.debug("Training time is : %s", datetime.now()-start_time)
+logger.debug("Training time is : %s", datetime.now() - start_time)
