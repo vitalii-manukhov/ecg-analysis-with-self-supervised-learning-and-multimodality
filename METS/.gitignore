@@ -1,7 +1,0 @@
-.idea
-__pycache__
-
-checkpoint/*
-METS/BERT_pretrain/*
-
-logs/*

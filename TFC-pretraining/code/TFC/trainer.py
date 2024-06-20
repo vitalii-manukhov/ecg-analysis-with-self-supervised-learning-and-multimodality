@@ -159,9 +159,9 @@ def Trainer(model,  model_optimizer, classifier,
                                 best_performance[4], best_performance[5]))
         print('Best KNN F1', max(KNN_f1))
 
-        logger.debug('Best Testing Performance: Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f' % 
-                    (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
-                    best_performance[4], best_performance[5]))
+        logger.debug('Best Testing Performance: Acc=%.4f | Precision = %.4f | Recall = %.4f | F1 = %.4f | AUROC= %.4f | AUPRC=%.4f' %
+                     (best_performance[0], best_performance[1], best_performance[2], best_performance[3],
+                      best_performance[4], best_performance[5]))
 
         logger.debug('Best KNN F1: %.4f' % max(KNN_f1))
 
